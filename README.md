@@ -75,7 +75,7 @@ To run this project on your local machine:
     ```bash
     cd lens-cap-generator
     ```
-3.  Open the `alphaver.html` file in your favorite web browser.
+3.  Open the `index.html` file in your favorite web browser.
 
 ## License
 
