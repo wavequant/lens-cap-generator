@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lens Cap Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            background-color: #1a1f2c;
+            color: #d1d9e6;
+        }
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            max-width: 1100px; /* Increased width */
+            width: 100%;
+        }
+        .preview-container {
+            background: #2c3344;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            flex: 2; /* Preview takes more space */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .controls-container {
+            background: #2c3344;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            flex: 1; /* Controls take less space */
+            align-self: flex-start;
+        }
+        h1, h2, h3 {
+            color: #e2e8f0;
+            text-align: center;
+            margin-top: 0;
+        }
+        h1 { margin-bottom: 0.5rem; }
+        h1+p { margin-bottom: 2.5rem; color: #a9b1c2; font-size: 0.9rem; text-align: center; }
+        h3 {
+            font-size: 1.1rem;
+            text-align: left;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #4a5368;
+        }
+        .input-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #c1c9d6;
+        }
+        input[type="number"], textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #545c6e;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            font-family: inherit;
+            background-color: #333b4f;
+            color: #e2e8f0;
+        }
+        textarea { resize: vertical; min-height: 60px; }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+        }
+        .help-text {
+            font-size: 0.8rem;
+            color: #818999;
+            margin-top: 0.5rem;
+            text-align: left;
+        }
+        .button-row {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .button, #download-link {
+            flex: 1;
+            display: inline-block;
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            padding: 0.8rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            text-decoration: none;
+        }
+        .button:hover { background-color: #0056b3; }
+        .button:disabled { background-color: #004a8f; color: #a9b1c2; cursor: not-allowed; }
+        #download-link { background-color: #28a745; }
+        #download-link:hover { background-color: #218838; }
+        .processing-message { color: #58a6ff; font-style: italic; }
+        #preview-placeholder {
+            color: #818999;
+            border: 2px dashed #545c6e;
+            padding: 4rem 2rem;
+            border-radius: 8px;
+            width: 100%;
+        }
+        #preview-canvas {
+            max-width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            border: 1px solid #545c6e;
+            border-radius: 8px;
+            cursor: grab;
+            touch-action: none;
+            display: none; /* Initially hidden */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        
+        <div class="preview-container">
+            <h2>3D Preview</h2>
+            <div id="preview-placeholder">
+                <p>Click 'Generate Model' to create a preview.</p>
+            </div>
+            <canvas id="preview-canvas" width="500" height="500"></canvas>
+            <p style="font-size: 0.8rem; margin-top: 1rem; margin-bottom: 0; color: #818999;">Click and drag to rotate.</p>
+        </div>
+
+        <div class="controls-container">
+            <h1>Lens Cap Generator</h1>
+            <p>Create a custom 3D-printable lens cap.</p>
+            
+            <div class="control-group">
+                <h3>Cap Dimensions</h3>
+                <div class="input-group">
+                    <label for="filter-thread">Filter Thread Diameter (mm)</label>
+                    <input type="number" id="filter-thread" value="58" min="10" max="150" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="additional-diameter">Additional Diameter for Lens Body (mm)</label>
+                    <input type="number" id="additional-diameter" value="3.0" min="0" max="20" step="0.1">
+                    <p class="help-text">Cap Inner Diameter = Filter Thread + Additional Diameter.</p>
+                </div>
+                <div class="input-group">
+                    <label for="cap-height">Total Cap Height (mm)</label>
+                    <input type="number" id="cap-height" value="8" min="4" max="30" step="0.5">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Outer Grips</h3>
+                <div class="input-group">
+                    <label for="grip-count">Number of Grips</label>
+                    <input type="number" id="grip-count" value="30" min="0" max="100" step="1">
+                </div>
+                <div class="input-group">
+                    <label for="grip-depth">Grip Depth (mm)</label>
+                    <input type="number" id="grip-depth" value="0.6" min="0" max="2" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="grip-height">Grip Height (mm)</label>
+                    <input type="number" id="grip-height" value="4.0" min="0" max="30" step="0.5">
+                </div>
+                 <div class="input-group">
+                    <label for="grip-top-margin">Grip Top Margin (mm)</label>
+                    <input type="number" id="grip-top-margin" value="0.5" min="0" max="10" step="0.1">
+                     <p class="help-text">Distance from the top of the cap to where grips begin.</p>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Internal Ridge</h3>
+                <div class="input-group">
+                    <label for="ridge-inset">Ridge Inset (mm)</label>
+                    <input type="number" id="ridge-inset" value="0.1" min="0.05" max="1" step="0.05">
+                    <p class="help-text">Smaller value = tighter fit.</p>
+                </div>
+                <div class="input-group">
+                    <label for="ridge-position">Ridge Position (%)</label>
+                    <input type="number" id="ridge-position" value="30" min="0" max="100" step="1">
+                    <p class="help-text">0% is at the bottom, 100% is at the top.</p>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Top Engraving</h3>
+                <div class="input-group">
+                    <label for="text">Engraved Text (on top)</label>
+                    <textarea id="text" rows="2" maxlength="50">58MM</textarea>
+                </div>
+                <div class="input-group">
+                    <label for="text-size">Text Size (%)</label>
+                    <input type="number" id="text-size" value="85" min="10" max="100" step="1">
+                </div>
+            </div>
+            
+            <div class="button-row">
+                <button class="button" id="generate-btn">Generate Model</button>
+                <div id="download-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // --- CORE LOGIC: NO EXTERNAL LIBRARIES ---
+
+    // --- 1. UI and Event Handling ---
+    const filterThreadInput = document.getElementById('filter-thread');
+    const additionalDiameterInput = document.getElementById('additional-diameter');
+    const capHeightInput = document.getElementById('cap-height');
+    const gripCountInput = document.getElementById('grip-count');
+    const gripDepthInput = document.getElementById('grip-depth');
+    const gripHeightInput = document.getElementById('grip-height');
+    const gripTopMarginInput = document.getElementById('grip-top-margin');
+    const ridgeInsetInput = document.getElementById('ridge-inset');
+    const ridgePositionInput = document.getElementById('ridge-position');
+    const textInput = document.getElementById('text');
+    const textSizeInput = document.getElementById('text-size');
+    const generateBtn = document.getElementById('generate-btn');
+    const downloadContainer = document.getElementById('download-container');
+    const previewPlaceholder = document.getElementById('preview-placeholder');
+
+    let generatedTriangles = [];
+
+    generateBtn.addEventListener('click', () => {
+        const params = {
+            filterThread: parseFloat(filterThreadInput.value),
+            additionalDiameter: parseFloat(additionalDiameterInput.value),
+            capHeight: parseFloat(capHeightInput.value),
+            gripCount: parseInt(gripCountInput.value, 10),
+            gripDepth: parseFloat(gripDepthInput.value),
+            gripHeight: parseFloat(gripHeightInput.value),
+            gripTopMargin: parseFloat(gripTopMarginInput.value),
+            ridgeInset: parseFloat(ridgeInsetInput.value),
+            ridgePosition: parseFloat(ridgePositionInput.value) / 100.0,
+            text: textInput.value.toUpperCase(),
+            textSizeFactor: parseFloat(textSizeInput.value) / 100.0,
+        };
+        
+        for (const key in params) {
+            if (key !== 'text' && isNaN(params[key])) {
+                alert(`Please enter a valid value for ${key}.`);
+                return;
+            }
+        }
+        
+        const actualLensDiameter = params.filterThread + params.additionalDiameter;
+        
+        generateBtn.disabled = true;
+        generateBtn.textContent = 'Generating...';
+        downloadContainer.innerHTML = '';
+        
+        setTimeout(() => {
+            try {
+                generatedTriangles = generateLensCapGeometry(actualLensDiameter, params);
+                const stlBlob = createBinaryStl(generatedTriangles);
+
+                // --- NEW FILENAME GENERATION LOGIC ---
+                
+                // Get the raw text for the filename
+                const filenameText = textInput.value.toUpperCase().replace(/\n/g, '_').replace(/[^a-zA-Z0-9_]/g, '') || 'blank';
+                
+                // Conditionally create the grip part of the name
+                let gripPart = '';
+                if (params.gripCount > 0 && params.gripHeight > 0) {
+                    gripPart = `_g${gripCountInput.value}x${gripDepthInput.value}d`; // e.g., _g30x0.6d
+                }
+                
+                // Assemble all parts into the final filename
+                const filename = `lens_cap_` + 
+                                 `${filterThreadInput.value}mm+${additionalDiameterInput.value}add` + // e.g., 58mm+3add
+                                 `_h${capHeightInput.value}` + // e.g., _h8
+                                 `${gripPart}` + // The grip part, or an empty string
+                                 `_r${ridgeInsetInput.value}i-p${ridgePositionInput.value}` + // e.g., _r0.1i-p30
+                                 `_t${textSizeInput.value}` + // e.g., _t85
+                                 `_${filenameText}` + // The user's text
+                                 `.stl`;
+
+                const downloadUrl = URL.createObjectURL(stlBlob);
+                
+                downloadContainer.innerHTML = `<a href="${downloadUrl}" id="download-link" download="${filename}">Download STL</a>`;
+                generateBtn.textContent = 'Regenerate';
+
+                previewPlaceholder.style.display = 'none';
+                canvas.style.display = 'block';
+                drawPreview();
+
+            } catch (error) {
+                console.error("Failed to generate STL:", error);
+                alert("An error occurred. Check console.");
+                downloadContainer.innerHTML = `<p style="color:red; text-align:center;">Failed</p>`;
+            } finally {
+                generateBtn.disabled = false;
+            }
+        }, 10);
+    });
+
+    // --- 2. 3D PREVIEW RENDERER (MATRIX-BASED ROTATION) ---
+    const canvas = document.getElementById('preview-canvas');
+    const ctx = canvas.getContext('2d');
+    let rotationMatrix = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    let isDragging = false, lastMouseX, lastMouseY;
+    function multiplyMatrices(m1, m2) { const result = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]; for (let i = 0; i < 3; i++) { for (let j = 0; j < 3; j++) { for (let k = 0; k < 3; k++) { result[i][j] += m1[i][k] * m2[k][j]; } } } return result; }
+    function rotatePoint(p, matrix) { const [x, y, z] = p; return [ matrix[0][0] * x + matrix[0][1] * y + matrix[0][2] * z, matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z, matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z ]; }
+    const initialRx = -0.6, initialRy = -0.5; const cosRx = Math.cos(initialRx), sinRx = Math.sin(initialRx); const cosRy = Math.cos(initialRy), sinRy = Math.sin(initialRy); const initialRotX = [[1, 0, 0], [0, cosRx, -sinRx], [0, sinRx, cosRx]]; const initialRotY = [[cosRy, 0, sinRy], [0, 1, 0], [-sinRy, 0, cosRy]]; rotationMatrix = multiplyMatrices(initialRotX, initialRotY);
+    canvas.addEventListener('pointerdown', e => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; canvas.style.cursor = 'grabbing'; });
+    canvas.addEventListener('pointermove', e => { if (!isDragging) return; const dx = e.clientX - lastMouseX; const dy = e.clientY - lastMouseY; const rotY_delta = dy * 0.01; const rotX_delta = dx * 0.01; const cY = Math.cos(rotY_delta), sY = Math.sin(rotY_delta); const cX = Math.cos(rotX_delta), sX = Math.sin(rotX_delta); const deltaMatrixY = [[1, 0, 0], [0, cY, -sY], [0, sY, cY]]; const deltaMatrixX = [[cX, 0, sX], [0, 1, 0], [-sX, 0, cX]]; const deltaMatrix = multiplyMatrices(deltaMatrixX, deltaMatrixY); rotationMatrix = multiplyMatrices(deltaMatrix, rotationMatrix); lastMouseX = e.clientX; lastMouseY = e.clientY; drawPreview(); });
+    const stopDragging = () => { isDragging = false; canvas.style.cursor = 'grab'; };
+    canvas.addEventListener('pointerup', stopDragging); canvas.addEventListener('pointerleave', stopDragging);
+    function drawPreview() {
+        if (!generatedTriangles.length) return;
+        ctx.fillStyle = "#2c3344"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = '#cccccc'; ctx.lineWidth = 0.5 * (canvas.width / 350);
+        const scale = canvas.width / ((parseFloat(filterThreadInput.value) + parseFloat(additionalDiameterInput.value)) * 1.5);
+        const center = canvas.width / 2;
+        for (const tri of generatedTriangles) {
+            ctx.beginPath();
+            const p1 = rotatePoint(tri[0], rotationMatrix); ctx.moveTo(p1[0] * scale + center, -p1[1] * scale + center);
+            const p2 = rotatePoint(tri[1], rotationMatrix); ctx.lineTo(p2[0] * scale + center, -p2[1] * scale + center);
+            const p3 = rotatePoint(tri[2], rotationMatrix); ctx.lineTo(p3[0] * scale + center, -p3[1] * scale + center);
+            ctx.closePath(); ctx.stroke();
+        }
+    }
+
+    // --- 3. 3D GEOMETRY GENERATION ---
+    function generateLensCapGeometry(lensDiameter, p) {
+        // --- Config ---
+        const R = 72, WALL_T = 1.8, TOP_T = 1.8;
+        const CHAMFER_H = 0.8, RIDGE_FLAT_H = 1.0;
+        const ENGRAVE_DEPTH = 0.8;
+        
+        // --- THIS IS THE FIX: Define vertices per grip for dynamic resolution ---
+        const VERTICES_PER_GROOVE = 4;
+
+        // --- Dimensions ---
+        const innerR = lensDiameter / 2, outerR = innerR + WALL_T, frictionR = innerR - p.ridgeInset;
+        let allTriangles = [];
+
+        // --- Build Outer Wall with Grips ---
+        const gripStart_Z = p.capHeight - p.gripTopMargin - p.gripHeight;
+        const gripEnd_Z = p.capHeight - p.gripTopMargin;
+
+        if (p.gripHeight > 0.01 && p.gripCount > 0 && gripStart_Z >= 0) {
+            // Calculate a dynamic segment count for the grips to ensure they are even
+            const gripSegs = p.gripCount * VERTICES_PER_GROOVE;
+
+            // 1. Bottom smooth section (uses default resolution)
+            if (gripStart_Z > 0.01) { allTriangles.push(...generateCylinder(outerR, gripStart_Z, R, false)); }
+            
+            // 2. Middle grooved section (uses new dynamic resolution)
+            const gripSection = generateGroovedCylinder(outerR, p.gripHeight, gripSegs, p.gripCount, p.gripDepth, false);
+            allTriangles.push(...gripSection.map(tri => tri.map(v => [v[0], v[1], v[2] + gripStart_Z])));
+            
+            // 3. Top smooth section (uses default resolution)
+            const topSmoothHeight = p.capHeight - gripEnd_Z;
+            if (topSmoothHeight > 0.01) {
+                const topSmoothSection = generateCylinder(outerR, topSmoothHeight, R, false);
+                allTriangles.push(...topSmoothSection.map(tri => tri.map(v => [v[0], v[1], v[2] + gripEnd_Z])));
+            }
+        } else { // Fallback for no grips
+            allTriangles.push(...generateCylinder(outerR, p.capHeight, R, false));
+        }
+        allTriangles.push(...generateAnnulus(outerR, innerR, 0, R, true));
+
+        // --- Build Inner Walls & Ridge ---
+        const ridgeTotalHeight = CHAMFER_H + RIDGE_FLAT_H + CHAMFER_H;
+        const innerCeiling = p.capHeight - TOP_T;
+        const availableTravel = innerCeiling - ridgeTotalHeight;
+        const ridgeStart_Z = availableTravel > 0 ? p.ridgePosition * availableTravel : 0;
+        let currentZ = 0;
+        if (ridgeStart_Z > 0.01) { allTriangles.push(...generateCylinder(innerR, ridgeStart_Z, R, true)); }
+        currentZ = ridgeStart_Z;
+        const lowerChamfer = generateTaperedCylinder(innerR, frictionR, CHAMFER_H, R, true);
+        allTriangles.push(...lowerChamfer.map(tri => tri.map(v => [v[0], v[1], v[2] + currentZ])));
+        currentZ += CHAMFER_H;
+        const ridgeWall = generateCylinder(frictionR, RIDGE_FLAT_H, R, true);
+        allTriangles.push(...ridgeWall.map(tri => tri.map(v => [v[0], v[1], v[2] + currentZ])));
+        currentZ += RIDGE_FLAT_H;
+        const upperChamfer = generateTaperedCylinder(frictionR, innerR, CHAMFER_H, R, true);
+        allTriangles.push(...upperChamfer.map(tri => tri.map(v => [v[0], v[1], v[2] + currentZ])));
+        currentZ += CHAMFER_H;
+        const upperWallHeight = innerCeiling - currentZ;
+        if (upperWallHeight > 0.01) { allTriangles.push(...generateCylinder(innerR, upperWallHeight, R, true).map(tri => tri.map(v => [v[0], v[1], v[2] + currentZ]))); }
+        allTriangles.push(...generateDisc(innerR, innerCeiling, R, true));
+        
+        // --- Perform Engraving ---
+        allTriangles.push(...generateEngravedTopSurface(outerR, p.capHeight, R, p.text, ENGRAVE_DEPTH, p.textSizeFactor));
+        return allTriangles;
+    }
+
+    function generateEngravedTopSurface(radius, z, segments, text, depth, textSizeFactor) {
+        const finalTriangles = []; const fitWidth = (radius * 1.8) * textSizeFactor; const textRects = getTextRects(text, fitWidth);
+        const topSurfaceTriangles = generateDisc(radius, z, segments, false);
+        for (const tri of topSurfaceTriangles) { let isInsideHole = false; const pointsToCheck = [tri[0], tri[1], tri[2]]; for (const point of pointsToCheck) { const px = point[0]; const py = point[1]; for (const hole of textRects) { if (px > hole.x && px < hole.x + hole.w && py > hole.y && py < hole.y + hole.d) { isInsideHole = true; break; } } if (isInsideHole) { break; } } if (!isInsideHole) { finalTriangles.push(tri); } }
+        for (const rect of textRects) { const {x, y, w, d} = rect; const floorZ = z - depth; const v_floor = [ [x,y,floorZ], [x+w,y,floorZ], [x+w,y+d,floorZ], [x,y+d,floorZ] ]; const v_top = [ [x,y,z], [x+w,y,z], [x+w,y+d,z], [x,y+d,z] ]; finalTriangles.push([v_floor[0], v_floor[2], v_floor[1]], [v_floor[0], v_floor[3], v_floor[2]]); finalTriangles.push([v_top[0], v_floor[1], v_floor[0]], [v_top[0], v_top[1], v_floor[1]]); finalTriangles.push([v_top[1], v_floor[2], v_floor[1]], [v_top[1], v_top[2], v_floor[2]]); finalTriangles.push([v_top[2], v_floor[3], v_floor[2]], [v_top[2], v_top[3], v_floor[3]]); finalTriangles.push([v_top[3], v_floor[0], v_floor[3]], [v_top[3], v_top[0], v_floor[0]]); }
+        return finalTriangles;
+    }
+
+    // --- 4. Primitive Shape Generators ---
+    function generateCylinder(r, h, segs, inv) { return generateTaperedCylinder(r, r, h, segs, inv); }
+    function generateTaperedCylinder(rBot, rTop, h, segs, inv) { const tris = []; for (let i = 0; i < segs; i++) { const a1 = (i / segs) * 2 * Math.PI, a2 = ((i + 1) / segs) * 2 * Math.PI; const p1 = [rBot * Math.cos(a1), rBot * Math.sin(a1), 0], p2 = [rTop * Math.cos(a1), rTop * Math.sin(a1), h]; const p3 = [rTop * Math.cos(a2), rTop * Math.sin(a2), h], p4 = [rBot * Math.cos(a2), rBot * Math.sin(a2), 0]; if (inv) { tris.push([p1, p3, p2], [p1, p4, p3]); } else { tris.push([p1, p2, p3], [p1, p3, p4]); } } return tris; }
+    function generateGroovedCylinder(baseRadius, h, segs, numGrooves, grooveDepth, inv) {
+        const tris = [];
+        for (let i = 0; i < segs; i++) {
+            const a1 = (i / segs) * 2 * Math.PI;
+            const a2 = ((i + 1) / segs) * 2 * Math.PI;
+            // Calculate radius based on angle using a cosine wave for smooth grooves
+            const r1 = baseRadius - grooveDepth * (0.5 * (1 - Math.cos(a1 * numGrooves)));
+            const r2 = baseRadius - grooveDepth * (0.5 * (1 - Math.cos(a2 * numGrooves)));
+            const p1 = [r1 * Math.cos(a1), r1 * Math.sin(a1), 0];
+            const p2 = [r1 * Math.cos(a1), r1 * Math.sin(a1), h];
+            const p3 = [r2 * Math.cos(a2), r2 * Math.sin(a2), h];
+            const p4 = [r2 * Math.cos(a2), r2 * Math.sin(a2), 0];
+            if (inv) { tris.push([p1, p3, p2], [p1, p4, p3]); } else { tris.push([p1, p2, p3], [p1, p3, p4]); }
+        }
+        return tris;
+    }
+    function generateDisc(r, z, segs, inv) { const tris = [], c = [0, 0, z]; for (let i = 0; i < segs; i++) { const a1 = (i / segs) * 2 * Math.PI, a2 = ((i + 1) / segs) * 2 * Math.PI; const p1 = [r * Math.cos(a1), r * Math.sin(a1), z], p2 = [r * Math.cos(a2), r * Math.sin(a2), z]; if (inv) { tris.push([c, p2, p1]); } else { tris.push([c, p1, p2]); } } return tris; }
+    function generateAnnulus(rOut, rIn, z, segs, inv) { const tris = []; for (let i = 0; i < segs; i++) { const a1 = (i / segs) * 2 * Math.PI, a2 = ((i + 1) / segs) * 2 * Math.PI; const p1o = [rOut * Math.cos(a1), rOut * Math.sin(a1), z], p2o = [rOut * Math.cos(a2), rOut * Math.sin(a2), z]; const p1i = [rIn * Math.cos(a1), rIn * Math.sin(a1), z], p2i = [rIn * Math.cos(a2), rIn * Math.sin(a2), z]; if (inv) { tris.push([p1i, p2o, p1o], [p1i, p2i, p2o]); } else { tris.push([p1i, p1o, p2o], [p1i, p2o, p2i]); } } return tris; }
+
+    // --- 5. Text & Font Data ---
+    const FONT_DATA = {
+        'A': [[0,0,1,7], [4,0,1,7], [1,6,3,1], [1,3,3,1]],
+        'B': [[0,0,1,7], [1,0,3,1], [4,1,1,2], [1,3,3,1], [4,4,1,2], [1,6,3,1]],
+        'C': [[1,0,4,1], [0,1,1,5], [1,6,4,1]],
+        'D': [[0,0,1,7], [1,0,3,1], [4,1,1,5], [1,6,3,1]],
+        'E': [[0,0,1,7], [1,0,4,1], [1,3,3,1], [1,6,4,1]],
+        'F': [[0,0,1,7], [1,3,3,1], [1,6,4,1]],
+        'G': [[1,0,4,1], [0,1,1,5], [1,6,4,1], [3,3,2,1], [4,1,1,2]],
+        'H': [[0,0,1,7], [4,0,1,7], [1,3,3,1]],
+        'I': [[0,0,5,1], [2,1,1,5], [0,6,5,1]],
+        'J': [[0,0,4,1], [3,1,1,6], [0,1,1,1]],
+        'K': [[0,0,1,7], [1,3,1,1], [2,4,1,2], [3,6,2,1], [2,1,1,2], [3,0,2,1]],
+        'L': [[0,0,1,7], [1,0,4,1]],
+        'M': [[0,0,1,7], [4,0,1,7], [1,5,1,2], [2,4,1,1], [3,5,1,2]],
+        'N': [[0,0,1,7], [4,0,1,7], [1,5,1,2], [2,3,1,2], [3,1,1,2]],
+        'O': [[1,0,3,1], [0,1,1,5], [4,1,1,5], [1,6,3,1]],
+        'P': [[0,0,1,7], [1,3,3,1], [4,4,1,2], [1,6,3,1]],
+        'Q': [[1,0,3,1], [0,1,1,5], [4,1,1,5], [1,6,3,1], [3,1,1,1], [4,0,1,1]],
+        'R': [[0,0,1,7], [1,6,3,1], [4,4,1,2], [1,3,3,1], [2,2,1,1], [3,1,1,1], [4,0,1,1]],
+        'S': [[1,6,4,1], [0,4,1,2], [1,3,3,1], [4,1,1,2], [1,0,4,1]],
+        'T': [[0,6,5,1], [2,0,1,6]],
+        'U': [[0,1,1,6], [4,1,1,6], [1,0,3,1]],
+        'V': [[0,2,1,5], [1,0,1,2], [3,0,1,2], [4,2,1,5], [2,0,1,1]],
+        'W': [[0,1,1,6], [4,1,1,6], [1,0,1,1], [2,1,1,1], [3,0,1,1]],
+        'X': [[0,0,1,2], [4,0,1,2], [1,2,3,3], [0,5,1,2], [4,5,1,2]],
+        'Y': [[0,4,1,3], [4,4,1,3], [1,2,3,2], [2,0,1,2]],
+        'Z': [[0,0,5,1], [1,1,1,1], [2,2,1,1], [3,3,1,1], [4,4,1,1], [0,6,5,1]],
+        '0': [[1,0,3,1], [0,1,1,5], [4,1,1,5], [1,6,3,1]],
+        '1': [[1,0,3,1], [2,1,1,6], [1,5,1,1]],
+        '2': [[0,6,5,1], [4,4,1,2], [0,3,4,1], [0,1,1,2], [0,0,5,1]],
+        '3': [[0,0,5,1], [4,1,1,2], [1,3,3,1], [4,4,1,2], [0,6,5,1]],
+        '4': [[0,3,1,4], [4,0,1,7], [1,3,3,1]],
+        '5': [[0,6,5,1], [0,4,1,2], [0,3,4,1], [4,1,1,2], [0,0,4,1]],
+        '6': [[1,6,4,1], [0,1,1,5], [1,0,4,1], [4,1,1,2], [1,3,3,1]],
+        '7': [[0,6,5,1], [4,4,1,2], [3,2,1,2], [2,0,1,2]],
+        '8': [[1,0,3,1], [0,1,1,2], [4,1,1,2], [1,3,3,1], [0,4,1,2], [4,4,1,2], [1,6,3,1]],
+        '9': [[1,0,4,1], [4,1,1,5], [1,6,4,1], [0,4,1,2], [1,3,3,1]],
+        ' ': [],
+        '.': [[2,0,1,1]],
+        '/': [[0,0,2,1], [1,1,2,1], [2,2,2,1], [3,3,2,1], [4,4,2,1]]
+    };
+    function getTextRects(text, fitToWidth) { const FONT_W = 5, FONT_H = 7, CHAR_SPACE = 2, LINE_SPACING = 3; const allRects = []; const lines = text.split('\n'); lines.reverse(); if (!text || lines.length === 0 || fitToWidth <= 0) return []; let maxFontUnitsW = 0; for (const line of lines) { let currentLineUnitsW = 0; for (let i = 0; i < line.length; i++) { if (FONT_DATA[line[i]]) { currentLineUnitsW += FONT_W + (i < line.length - 1 ? CHAR_SPACE : 0); } } if (currentLineUnitsW > maxFontUnitsW) { maxFontUnitsW = currentLineUnitsW; } } if (maxFontUnitsW === 0) return []; const scale = fitToWidth / maxFontUnitsW; const totalFontUnitsH = (lines.length * FONT_H) + ((lines.length - 1) * LINE_SPACING); const totalBlockHeight = totalFontUnitsH * scale; let lineY_top = -totalBlockHeight / 2; for (const line of lines) { let lineFontUnitsW = 0; for (let i = 0; i < line.length; i++) { if (FONT_DATA[line[i]]) { lineFontUnitsW += FONT_W + (i < line.length - 1 ? CHAR_SPACE : 0); } } const lineRenderedWidth = lineFontUnitsW * scale; let currentX = -(lineRenderedWidth / 2); for (const char of line) { const charData = FONT_DATA[char]; if (charData) { for (const rect of charData) { const [rx, ry, rw, rh] = rect; allRects.push({ x: currentX + (rx * scale), y: lineY_top + (ry * scale), w: rw * scale, d: rh * scale }); } currentX += (FONT_W + CHAR_SPACE) * scale; } } lineY_top += (FONT_H + LINE_SPACING) * scale; } return allRects; }
+    
+    // --- 6. STL File Generation ---
+    function createBinaryStl(triangles) {
+        const n = triangles.length, bufSize = 84 + n * 50, buf = new ArrayBuffer(bufSize);
+        const view = new DataView(buf); let offset = 80;
+        view.setUint32(offset, n, true); offset += 4;
+        for (const tri of triangles) {
+            offset += 12; // Skip normal
+            for (const v of tri) { view.setFloat32(offset, v[0], true); offset += 4; view.setFloat32(offset, v[1], true); offset += 4; view.setFloat32(offset, v[2], true); offset += 4; }
+            offset += 2; // Skip attribute
+        }
+        return new Blob([buf], { type: 'application/sla' });
+    }
+    </script>
+</body>
+</html>
